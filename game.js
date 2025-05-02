@@ -453,15 +453,21 @@ function drawBullets() {
     });
 }
 
-// Draw asteroids (Modified for size and damage flash)
+// Draw asteroids (Modified for highlight gradient)
 function drawAsteroids() {
     if (asteroidImageLoaded) {
+        // --- Drop Shadow Setup ---
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'; 
+        ctx.shadowBlur = 8; 
+        ctx.shadowOffsetX = 4; 
+        ctx.shadowOffsetY = 4; 
+
         asteroids.forEach(asteroid => {
             ctx.save(); 
             ctx.translate(asteroid.x + asteroid.width / 2, asteroid.y + asteroid.height / 2);
             ctx.rotate(asteroid.angle); 
             
-            // Draw the image centered at the new origin (0,0)
+            // 1. Draw the image (with drop shadow)
             ctx.drawImage(
                 asteroidImg, 
                 -asteroid.width / 2, 
@@ -469,9 +475,46 @@ function drawAsteroids() {
                 asteroid.width, 
                 asteroid.height
             );
+
+            // --- Surface Shading Gradient ---
+            ctx.shadowColor = 'transparent'; // Disable shadow for gradients
+            const radius = asteroid.width / 2; 
             
+            // SHADOW GRADIENT (Bottom-Right)
+            const shadowGradX1 = radius * 0.4; // Offset start away from light
+            const shadowGradY1 = radius * 0.4;
+            // Adjusted end point slightly to avoid center concentration
+            const shadowGrad = ctx.createRadialGradient(shadowGradX1, shadowGradY1, radius * 0.1, radius * 0.1, radius * 0.1, radius * 1.2); 
+            shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.4)'); 
+            shadowGrad.addColorStop(0.6, 'rgba(0, 0, 0, 0.1)'); 
+            shadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');   
+            ctx.fillStyle = shadowGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.05, 0, Math.PI * 2); // Slightly larger circle for full coverage
+            ctx.fill();
+
+            // HIGHLIGHT GRADIENT (Top-Left)
+            const hlGradX1 = radius * -0.4; // Offset start towards light
+            const hlGradY1 = radius * -0.4;
+             // Adjusted end point slightly to avoid center concentration
+            const hlGrad = ctx.createRadialGradient(hlGradX1, hlGradY1, radius * 0.05, radius * -0.1, radius * -0.1, radius * 0.9); // Smaller extent
+            hlGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)'); // Semi-transparent white
+            hlGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
+            hlGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');   
+            ctx.fillStyle = hlGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.05, 0, Math.PI * 2); 
+            ctx.fill();
+
             ctx.restore(); 
         });
+
+        // --- Reset Drop Shadow Properties ---
+        ctx.shadowColor = 'transparent'; 
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
     } else {
         // Fallback drawing (Could also scale based on asteroid.width)
         ctx.fillStyle = '#ff0000';
