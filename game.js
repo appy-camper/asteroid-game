@@ -33,7 +33,10 @@ const spaceship = {
     spreadShotEndTime: 0, // Timestamp when spread shot ends
     // Malfunction state
     weaponMalfunctionDuration: 5000, // Duration of malfunction (ms)
-    weaponMalfunctionEndTime: 0 // Timestamp when malfunction ends
+    weaponMalfunctionEndTime: 0, // Timestamp when malfunction ends
+    // Wide Shot state
+    wideShotDuration: 7000, // Duration of wide shot (ms)
+    wideShotEndTime: 0 // Timestamp when wide shot ends
 };
 
 const asteroids = [];
@@ -45,14 +48,22 @@ let gameOver = false;
 // Bullets array
 const bullets = [];
 const bulletSpeed = 7;
-const bulletSize = 5;
-const bulletSpreadSpeed = 2.5; // Horizontal speed for spread bullets
+const bulletSize = 5; // Base width
+const wideBulletSize = 35; // Increased width for wide shot (was 25)
+const wideBulletHeight = 10; // Increased height for wide shot (base is bulletSize*2 = 10)
+const wideShotFireRate = 180; // Specific fire rate for wide shot (ms) - faster than base (400) but slower than rapid (50)
+const bulletSpreadSpeed = 2.5; 
 
 // Powerups array
 const powerups = [];
 const powerupSize = 15;
 const powerupSpeed = 2;
 const powerupDropChance = 0.2; // Increased from 0.1 (10% -> 20%)
+
+// Floating score text array
+const floatingScores = [];
+const floatSpeed = 0.8; 
+const floatLife = 60; // Lifespan in frames (~1 second)
 
 // Explosion particles array
 const explosionParticles = [];
@@ -173,7 +184,7 @@ function createAsteroid() {
     });
 }
 
-// Shoot function (Modified for malfunction check)
+// Shoot function (Modified for wide shot buffs)
 function shoot() {
     const now = Date.now();
     
@@ -183,28 +194,41 @@ function shoot() {
         return; // Exit function, no shot possible
     }
 
-    // Proceed with normal/powerup checks if not malfunctioning
+    // Check active powerups
     const isRapidFireActive = now < spaceship.rapidFireEndTime;
     const isSpreadShotActive = now < spaceship.spreadShotEndTime;
-    const currentFireRate = isRapidFireActive ? spaceship.rapidFireRate : spaceship.fireRate;
+    const isWideShotActive = now < spaceship.wideShotEndTime; 
+    
+    // Determine current fire rate - use the fastest active one
+    let currentFireRate = spaceship.fireRate; // Start with base
+    if (isWideShotActive) {
+        currentFireRate = Math.min(currentFireRate, wideShotFireRate); // Apply wide shot rate if faster
+    }
+    if (isRapidFireActive) {
+        currentFireRate = Math.min(currentFireRate, spaceship.rapidFireRate); // Apply rapid fire rate if even faster
+    }
+    
     const timeSinceLastShot = now - spaceship.lastShotTime;
 
-    // console.log(`Trying to shoot. RapidFire: ${isRapidFireActive}. Spread: ${isSpreadShotActive}. Rate: ${currentFireRate}ms. Time since last: ${timeSinceLastShot}ms.`); 
+    // console.log(`Trying to shoot... Wide: ${isWideShotActive}. Rate: ${currentFireRate}`); 
 
     if (timeSinceLastShot >= currentFireRate) {
         // console.log("Shot fired!"); 
         const startX = spaceship.x;
         const startY = spaceship.y - spaceship.height / 2; 
+        
+        // Determine bullet dimensions based on wide shot
+        const currentBulletWidth = isWideShotActive ? wideBulletSize : bulletSize; 
+        const currentBulletHeight = isWideShotActive ? wideBulletHeight : (bulletSize * 2);
 
         if (isSpreadShotActive) {
-            // Create 3 bullets with spread
-            bullets.push({ x: startX, y: startY, width: bulletSize, height: bulletSize * 2, speed: bulletSpeed, dx: 0 }); // Center
-            bullets.push({ x: startX, y: startY, width: bulletSize, height: bulletSize * 2, speed: bulletSpeed, dx: -bulletSpreadSpeed }); // Left
-            bullets.push({ x: startX, y: startY, width: bulletSize, height: bulletSize * 2, speed: bulletSpeed, dx: bulletSpreadSpeed }); // Right
-            console.log("Fired spread shot!");
+            // Create 3 bullets with spread (use current dimensions)
+            bullets.push({ x: startX, y: startY, width: currentBulletWidth, height: currentBulletHeight, speed: bulletSpeed, dx: 0 }); 
+            bullets.push({ x: startX, y: startY, width: currentBulletWidth, height: currentBulletHeight, speed: bulletSpeed, dx: -bulletSpreadSpeed }); 
+            bullets.push({ x: startX, y: startY, width: currentBulletWidth, height: currentBulletHeight, speed: bulletSpeed, dx: bulletSpreadSpeed }); 
         } else {
-            // Create 1 standard bullet
-            bullets.push({ x: startX, y: startY, width: bulletSize, height: bulletSize * 2, speed: bulletSpeed, dx: 0 }); // Ensure dx=0 for standard shots
+            // Create 1 bullet (use current dimensions)
+            bullets.push({ x: startX, y: startY, width: currentBulletWidth, height: currentBulletHeight, speed: bulletSpeed, dx: 0 }); 
         }
         
         spaceship.lastShotTime = now; 
@@ -313,13 +337,16 @@ function createSparks(ship) {
 function spawnPowerup(x, y) { 
     const dropRoll = Math.random();
     let type;
-    if (dropRoll < 0.2) { // 20% Shield (was 0.3)
+    // Adjust probabilities - Example: ~20% each
+    if (dropRoll < 0.2) { 
         type = 'shield';
-    } else if (dropRoll < 0.4) { // 20% Rapid Fire (was 0.55)
+    } else if (dropRoll < 0.4) { 
         type = 'rapidFire';
-    } else if (dropRoll < 0.6) { // 20% Spread Shot (was 0.80)
+    } else if (dropRoll < 0.6) { 
         type = 'spreadShot';
-    } else { // 40% Weapon Malfunction (was 20%)
+    } else if (dropRoll < 0.8) { 
+        type = 'wideShot'; // Add wide shot chance
+    } else { 
         type = 'weaponMalfunction';
     }
     
@@ -515,6 +542,13 @@ function drawPowerups() {
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1;
             ctx.strokeRect(p.x - p.width / 2, p.y - p.height / 2, p.width, p.height); // Outer border
+        } else if (p.type === 'wideShot') {
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.9)'; // Light grey/silver color
+            ctx.fillRect(p.x - p.width / 2, p.y - p.height / 4, p.width, p.height / 2); // Draw as horizontal bar
+            // Optional: add border
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(p.x - p.width / 2, p.y - p.height / 2, p.width, p.height); 
         } else if (p.type === 'weaponMalfunction') {
             ctx.fillStyle = 'rgba(255, 0, 0, 0.9)'; // Red color
             ctx.strokeStyle = 'white';
@@ -530,6 +564,28 @@ function drawPowerups() {
             // ctx.fillRect(p.x - p.width / 2, p.y - p.height / 2, p.width, p.height);
             // ctx.strokeRect(p.x - p.width / 2, p.y - p.height / 2, p.width, p.height);
         }
+    });
+}
+
+// Spawn Floating Score Text
+function spawnFloatingScore(x, y, value) {
+    floatingScores.push({
+        x: x,
+        y: y,
+        text: `+${value}`,
+        life: floatLife,
+        maxLife: floatLife // Store for opacity calculation
+    });
+}
+
+// Draw Floating Scores
+function drawFloatingScores() {
+    floatingScores.forEach(fs => {
+        const opacity = Math.max(0, fs.life / fs.maxLife);
+        ctx.fillStyle = `rgba(255, 255, 100, ${opacity * 0.9})`; // Yellowish color
+        ctx.font = '16px Arial'; 
+        ctx.textAlign = 'center'; // Center the text horizontally
+        ctx.fillText(fs.text, fs.x, fs.y);
     });
 }
 
@@ -596,6 +652,12 @@ function gameLoop() {
         console.log("Spread shot ended.");
     }
 
+    // Check wide shot duration
+    if (spaceship.wideShotEndTime > 0 && now >= spaceship.wideShotEndTime) {
+        spaceship.wideShotEndTime = 0; 
+        console.log("Wide shot ended.");
+    }
+
     // Check malfunction duration & Create Sparks
     if (spaceship.weaponMalfunctionEndTime > 0) {
         if (now >= spaceship.weaponMalfunctionEndTime) {
@@ -606,6 +668,16 @@ function gameLoop() {
             if (Math.random() < 0.2) { // 20% chance per frame to add sparks
                 createSparks(spaceship);
             }
+        }
+    }
+
+    // Update Floating Scores
+    for (let i = floatingScores.length - 1; i >= 0; i--) {
+        const fs = floatingScores[i];
+        fs.y -= floatSpeed; // Move up
+        fs.life -= 1;
+        if (fs.life <= 0) {
+            floatingScores.splice(i, 1); // Remove dead text
         }
     }
 
@@ -685,8 +757,9 @@ function gameLoop() {
 
                     if (asteroid.health <= 0) {
                         // Destroyed
-                        console.log(`${asteroid.sizeCategory} asteroid destroyed!`);
-                        score += asteroid.scoreValue; // Add score based on size
+                        console.log(`${asteroid.sizeCategory} asteroid destroyed! Score: +${asteroid.scoreValue}`);
+                        score += asteroid.scoreValue; 
+                        spawnFloatingScore(asteroid.x + asteroid.width / 2, asteroid.y + asteroid.height / 2, asteroid.scoreValue); // Spawn score text
                         createDebris(asteroid); // Pass the whole asteroid object for scaling
                         
                         // Chance to spawn powerup
@@ -727,7 +800,7 @@ function gameLoop() {
             shoot(); // Call shoot every frame, cooldown logic inside shoot() handles rate
         }
 
-        // Check Ship-Powerup collisions (updated for malfunction)
+        // Check Ship-Powerup collisions (updated for wide shot and exclusivity)
         for (let i = powerups.length - 1; i >= 0; i--) {
             const p = powerups[i];
             // Simple distance check from ship center to powerup center
@@ -742,18 +815,27 @@ function gameLoop() {
                     console.log("Shield Activated!");
                 } else if (p.type === 'rapidFire') {
                     spaceship.rapidFireEndTime = Date.now() + spaceship.rapidFireDuration;
-                    spaceship.spreadShotEndTime = 0; // Disable spread shot
-                    spaceship.weaponMalfunctionEndTime = 0; // Clear malfunction
+                    spaceship.spreadShotEndTime = 0; 
+                    spaceship.wideShotEndTime = 0; // Disable wide shot
+                    spaceship.weaponMalfunctionEndTime = 0; 
                     console.log("Rapid Fire Activated!");
                 } else if (p.type === 'spreadShot') {
                     spaceship.spreadShotEndTime = Date.now() + spaceship.spreadShotDuration;
-                    spaceship.rapidFireEndTime = 0; // Disable rapid fire
-                    spaceship.weaponMalfunctionEndTime = 0; // Clear malfunction
+                    spaceship.rapidFireEndTime = 0; 
+                    spaceship.wideShotEndTime = 0; // Disable wide shot
+                    spaceship.weaponMalfunctionEndTime = 0; 
                     console.log("Spread Shot Activated!");
+                } else if (p.type === 'wideShot') {
+                    spaceship.wideShotEndTime = Date.now() + spaceship.wideShotDuration;
+                    spaceship.rapidFireEndTime = 0; // Disable other weapon types
+                    spaceship.spreadShotEndTime = 0;
+                    spaceship.weaponMalfunctionEndTime = 0; 
+                    console.log("Wide Shot Activated!");
                 } else if (p.type === 'weaponMalfunction') {
                     spaceship.weaponMalfunctionEndTime = Date.now() + spaceship.weaponMalfunctionDuration;
                     spaceship.rapidFireEndTime = 0; // Disable active powerups
                     spaceship.spreadShotEndTime = 0; 
+                    spaceship.wideShotEndTime = 0; 
                     console.log("Weapon Malfunction Activated!");
                 }
                 powerups.splice(i, 1); // Remove collected item
@@ -764,7 +846,8 @@ function gameLoop() {
     // Draw everything
     drawStars(); 
     drawBullets(); 
-    drawPowerups(); // Draw powerup items
+    drawPowerups(); 
+    drawFloatingScores(); // Draw floating score text
     
     // Draw ship and flame ONLY if game is not over
     if (!gameOver) {
@@ -812,6 +895,7 @@ function resetGame() {
     bullets.length = 0;
     powerups.length = 0;
     explosionParticles.length = 0;
+    floatingScores.length = 0;
 
     // Reset spaceship position and state
     spaceship.x = canvas.width / 2;
