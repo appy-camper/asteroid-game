@@ -5,23 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Space Dodge</title>
     <style>
-        body {
+        html, body {
             margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Prevent scrollbars from body */
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background-color: #000;
-            overflow: hidden;
+        }
+        #gameContainer {
+            width: 260px; /* Or a fixed size like 800px */
+            height: 270px; /* Or a fixed size like 600px */
+            border: 2px solid #111; /* Border on container */
+            position: relative; /* For potential future UI elements */
         }
         canvas {
-            border: 2px solid #333;
+            /* Removed fixed border from canvas */
             cursor: none;
+            width: 100%;  /* Fill container width */
+            height: 100%; /* Fill container height */
+            display: block; /* Remove extra space below canvas */
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+    </div>
     <script src="game.js"></script>
 </body>
 </html> 
