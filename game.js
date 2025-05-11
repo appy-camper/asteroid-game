@@ -155,8 +155,7 @@ canvas.addEventListener("touchmove", (e) => {
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches[0];
   mouseX = touch.clientX - rect.left;
-  // Offset Y position upward by 100 pixels to keep ship above finger
-  mouseY = touch.clientY - rect.top - 100;
+  mouseY = touch.clientY - rect.top;
 });
 
 canvas.addEventListener("touchstart", (e) => {
@@ -165,8 +164,7 @@ canvas.addEventListener("touchstart", (e) => {
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches[0];
   mouseX = touch.clientX - rect.left;
-  // Offset Y position upward by 100 pixels to keep ship above finger
-  mouseY = touch.clientY - rect.top - 100;
+  mouseY = touch.clientY - rect.top;
   
   if (gameOver) {
     resetGame();
