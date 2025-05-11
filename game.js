@@ -133,47 +133,90 @@ spaceship.img.src =
 
 // Mouse state
 let isMouseDown = false;
+let isMobileDevice = false;
+
+// Check if device is mobile
+function checkMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
 
 // Event listeners
 canvas.addEventListener("mousemove", (e) => {
+  if (!isMobileDevice) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+  }
+});
+
+// Touch event handlers
+canvas.addEventListener("touchmove", (e) => {
+  e.preventDefault(); // Prevent scrolling
   const rect = canvas.getBoundingClientRect();
-  mouseX = e.clientX - rect.left;
-  mouseY = e.clientY - rect.top; // Store Y position
+  const touch = e.touches[0];
+  mouseX = touch.clientX - rect.left;
+  mouseY = touch.clientY - rect.top;
+});
+
+canvas.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  isMouseDown = true;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  mouseX = touch.clientX - rect.left;
+  mouseY = touch.clientY - rect.top;
+  
+  if (gameOver) {
+    resetGame();
+    mouseControlActive = true;
+    spaceship.x = mouseX;
+    spaceship.y = mouseY;
+    spaceship.x = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, spaceship.x));
+    const topBound = spaceship.height / 2;
+    const bottomBound = canvas.height - spaceship.height / 2;
+    spaceship.y = Math.max(topBound, Math.min(bottomBound, spaceship.y));
+  } else if (!mouseControlActive && !isShipAnimatingToStart) {
+    mouseControlActive = true;
+    isShipAnimatingToStart = true;
+    shipAnimationTargetX = mouseX;
+    shipAnimationTargetY = mouseY;
+  }
+});
+
+canvas.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  isMouseDown = false;
 });
 
 // ADD mousedown listener
 canvas.addEventListener("mousedown", (e) => {
-  if (gameOver) {
-    resetGame(); // Resets game state, ship to center, mouseControlActive = false
-    
-    // Override for instant control at mouse position after game over click
-    mouseControlActive = true; 
-    isMouseDown = true; // Allow shooting on this click
-    
-    spaceship.x = mouseX;
-    spaceship.y = mouseY;
-    
-    // Apply constraints immediately after placing ship at mouse
-    spaceship.x = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, spaceship.x));
-    const topBound = spaceship.height / 2;
-    const bottomBound = canvas.height - spaceship.height / 2; 
-    spaceship.y = Math.max(topBound, Math.min(bottomBound, spaceship.y));
-
-  } else { // If game is not over
-    isMouseDown = true;
-    // Only trigger animation from center if mouse control hasn't been gained yet AND not already animating
-    if (!mouseControlActive && !isShipAnimatingToStart) { 
+  if (!isMobileDevice) {
+    if (gameOver) {
+      resetGame();
+      mouseControlActive = true;
+      isMouseDown = true;
+      spaceship.x = mouseX;
+      spaceship.y = mouseY;
+      spaceship.x = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, spaceship.x));
+      const topBound = spaceship.height / 2;
+      const bottomBound = canvas.height - spaceship.height / 2;
+      spaceship.y = Math.max(topBound, Math.min(bottomBound, spaceship.y));
+    } else {
+      isMouseDown = true;
+      if (!mouseControlActive && !isShipAnimatingToStart) {
         mouseControlActive = true;
-        isShipAnimatingToStart = true; 
-        shipAnimationTargetX = mouseX; 
+        isShipAnimatingToStart = true;
+        shipAnimationTargetX = mouseX;
         shipAnimationTargetY = mouseY;
+      }
     }
   }
 });
 
-// ADD mouseup listener
-canvas.addEventListener("mouseup", (e) => {
-  isMouseDown = false;
+canvas.addEventListener("mouseup", () => {
+  if (!isMobileDevice) {
+    isMouseDown = false;
+  }
 });
 
 // Create asteroids (Modified for dx)
@@ -800,6 +843,11 @@ function gameLoop() {
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // Auto-fire for mobile devices
+  if (isMobileDevice && mouseControlActive && !gameOver) {
+    shoot();
+  }
+
   // Animate displayedScore towards actual score (NEW)
   if (displayedScore < score) {
     let diff = score - displayedScore;
@@ -1117,6 +1165,7 @@ function gameLoop() {
 // --- Window Load Event ---
 window.onload = () => {
     windowFullyLoaded = true;
+    isMobileDevice = checkMobileDevice();
     attemptGameStart();
 };
 

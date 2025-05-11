@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Space Dodge</title>
     <style>
         html, body {
@@ -15,12 +15,17 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            touch-action: none; /* Prevent default touch actions */
+            -webkit-touch-callout: none; /* Prevent callout to copy image */
+            -webkit-user-select: none; /* Prevent copy paste */
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
         }
         #gameContainer {
             width: 100vw; /* Or a fixed size like 800px */
             height: 100vh; /* Or a fixed size like 600px */
             border: 2px solid #111; /* Border on container */
             position: relative; /* For potential future UI elements */
+            touch-action: none;
         }
         canvas {
             /* Removed fixed border from canvas */
@@ -28,6 +33,7 @@
             width: 100%;  /* Fill container width */
             height: 100%; /* Fill container height */
             display: block; /* Remove extra space below canvas */
+            touch-action: none;
         }
     </style>
 </head>
