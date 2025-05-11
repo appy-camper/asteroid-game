@@ -154,18 +154,9 @@ canvas.addEventListener("touchmove", (e) => {
   e.preventDefault(); // Prevent scrolling
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches[0];
-  const touchX = touch.clientX - rect.left;
-  const touchY = touch.clientY - rect.top;
-  
-  // Calculate ship position with offset
-  mouseX = touchX;
-  mouseY = touchY - 100; // Offset upward by 100 pixels
-  
-  // Ensure ship stays within bounds
-  mouseX = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, mouseX));
-  const topBound = spaceship.height / 2;
-  const bottomBound = canvas.height - spaceship.height / 2;
-  mouseY = Math.max(topBound, Math.min(bottomBound, mouseY));
+  mouseX = touch.clientX - rect.left;
+  // Offset Y position upward by 100 pixels to keep ship above finger
+  mouseY = touch.clientY - rect.top - 100;
 });
 
 canvas.addEventListener("touchstart", (e) => {
@@ -173,24 +164,19 @@ canvas.addEventListener("touchstart", (e) => {
   isMouseDown = true;
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches[0];
-  const touchX = touch.clientX - rect.left;
-  const touchY = touch.clientY - rect.top;
-  
-  // Calculate ship position with offset
-  mouseX = touchX;
-  mouseY = touchY - 100; // Offset upward by 100 pixels
-  
-  // Ensure ship stays within bounds
-  mouseX = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, mouseX));
-  const topBound = spaceship.height / 2;
-  const bottomBound = canvas.height - spaceship.height / 2;
-  mouseY = Math.max(topBound, Math.min(bottomBound, mouseY));
+  mouseX = touch.clientX - rect.left;
+  // Offset Y position upward by 100 pixels to keep ship above finger
+  mouseY = touch.clientY - rect.top - 100;
   
   if (gameOver) {
     resetGame();
     mouseControlActive = true;
     spaceship.x = mouseX;
     spaceship.y = mouseY;
+    spaceship.x = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, spaceship.x));
+    const topBound = spaceship.height / 2;
+    const bottomBound = canvas.height - spaceship.height / 2;
+    spaceship.y = Math.max(topBound, Math.min(bottomBound, spaceship.y));
   } else if (!mouseControlActive && !isShipAnimatingToStart) {
     mouseControlActive = true;
     isShipAnimatingToStart = true;
@@ -964,23 +950,18 @@ function gameLoop() {
             let lowerBound = (spaceship.flameFlickerRate < 0) ? spaceship.flameMinSize : 0;
             spaceship.flameSize = Math.max(lowerBound, Math.min(spaceship.flameSize, spaceship.flameMaxSize));
         }
-    } else if (mouseControlActive) {
-        // Direct position update for mobile
-        if (isMobileDevice) {
-            spaceship.x = mouseX;
-            spaceship.y = mouseY;
-        } else {
-            // Normal mouse following after animation 
-            spaceship.x = mouseX;
-            spaceship.y = mouseY; 
 
-            // Constrain X position
-            spaceship.x = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, spaceship.x));
-            // Constrain Y position
-            const topBound = spaceship.height / 2;
-            const bottomBound = canvas.height - spaceship.height / 2; 
-            spaceship.y = Math.max(topBound, Math.min(bottomBound, spaceship.y));
-        }
+    } else if (mouseControlActive) {
+        // Normal mouse following after animation 
+        spaceship.x = mouseX;
+        spaceship.y = mouseY; 
+
+        // Constrain X position
+        spaceship.x = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, spaceship.x));
+        // Constrain Y position
+        const topBound = spaceship.height / 2;
+        const bottomBound = canvas.height - spaceship.height / 2; 
+        spaceship.y = Math.max(topBound, Math.min(bottomBound, spaceship.y));
 
         // Animate flame (respecting minSize for flicker)
         spaceship.flameSize += spaceship.flameFlickerRate;
