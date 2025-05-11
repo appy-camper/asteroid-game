@@ -137,10 +137,7 @@ let isMobileDevice = false;
 
 // Check if device is mobile
 function checkMobileDevice() {
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-    const isChrome = /CriOS/.test(ua);
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (isIOS && isChrome);
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 // Event listeners
@@ -162,9 +159,7 @@ canvas.addEventListener("touchmove", (e) => {
   
   // Calculate ship position with offset
   mouseX = touchX;
-  // Use a larger offset for iOS devices
-  const offset = isMobileDevice ? 150 : 100;
-  mouseY = Math.max(0, touchY - offset); // Ensure we don't go above the screen
+  mouseY = touchY - 100; // Offset upward by 100 pixels
   
   // Ensure ship stays within bounds
   mouseX = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, mouseX));
@@ -183,9 +178,7 @@ canvas.addEventListener("touchstart", (e) => {
   
   // Calculate ship position with offset
   mouseX = touchX;
-  // Use a larger offset for iOS devices
-  const offset = isMobileDevice ? 150 : 100;
-  mouseY = Math.max(0, touchY - offset); // Ensure we don't go above the screen
+  mouseY = touchY - 100; // Offset upward by 100 pixels
   
   // Ensure ship stays within bounds
   mouseX = Math.max(spaceship.width/2, Math.min(canvas.width - spaceship.width/2, mouseX));
@@ -206,8 +199,7 @@ canvas.addEventListener("touchstart", (e) => {
   }
 });
 
-// Add touchcancel handler for iOS
-canvas.addEventListener("touchcancel", (e) => {
+canvas.addEventListener("touchend", (e) => {
   e.preventDefault();
   isMouseDown = false;
 });
